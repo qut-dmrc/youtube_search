@@ -2,7 +2,7 @@
 
 Our research examines how political parties and other actors communicate during elections.
 
-This script takes a list of keywords and searches YouTube for matches. 
+This script takes a list of keywords and searches YouTube for matches. It saves results to a CSV file. You can configure the type of search and set frequency according to your needs.
 
 ## Usage
 
