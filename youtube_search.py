@@ -59,7 +59,7 @@ def main():
         logger.setLevel(logging.INFO)
     
     keywords = get_keywords(args['<csv_input_file_name>'])
-    logging.info("Starting to collect search results from {len(keywords)} keywords.")
+    logging.info(f"Starting to collect search results from {len(keywords)} keywords.")
 
     start_time = datetime.datetime.utcnow()
 
