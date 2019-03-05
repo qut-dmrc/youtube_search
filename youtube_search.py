@@ -9,7 +9,10 @@ Input:
     Create a CSV file 'youtube_keywords.csv' with at least two columns: keyword, study_group.
 
 Output:
-    Save results to local CSV file 'youtube_politics.csv'
+    Save results to a BigQuery table (data expires in 14 days).
+
+Setup:
+    Copy config_default.py to config_local.py and fill with your values (API keys and save table)
 
 """
 

@@ -8,8 +8,15 @@ This script takes a list of keywords and searches YouTube for matches. It saves 
 
 Create a CSV file with at least two columns: keyword, study_group. Our standard input CSV contains a list of all Australian Federal candidates and electorates.
 
+Copy config_default.py to config_local.py, and fill in your values as appropriate.
+
 Add your YouTube API key to config_local.py, in the format:
 DEVELOPER_KEY = "<YOUR_API_KEY_HERE>"
+
+Also add the file path to your BigQuery JSON key, and fill in the appropriate values for the table you want to save results to.
+
+Note that in accordance with YouTube API rules, data saved to BigQuery expires in 14 days.
+
 
 Run the program:
 
