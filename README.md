@@ -2,7 +2,7 @@
 
 Our research examines how political parties and other actors communicate during elections.
 
-This script takes a list of keywords and searches YouTube for matches. It saves results to a CSV file. You can configure the type of search and set frequency according to your needs.
+This script takes a list of keywords and searches YouTube for matches. It saves results to Google BigQuery. You can configure the type of search and set frequency according to your needs. Note that in accordance with YouTube API rules, data saved to BigQuery expires in 14 days.
 
 ## Usage
 
@@ -15,7 +15,6 @@ DEVELOPER_KEY = "<YOUR_API_KEY_HERE>"
 
 Also add the file path to your BigQuery JSON key, and fill in the appropriate values for the table you want to save results to.
 
-Note that in accordance with YouTube API rules, data saved to BigQuery expires in 14 days.
 
 
 Run the program:
