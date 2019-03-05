@@ -23,13 +23,16 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from urllib.parse import quote
 import logging
-from config_local import DEVELOPER_KEY
+from config_local import DEVELOPER_KEY, PROJECT_ID, DATASET, SAVE_TABLE_SEARCH, BQ_KEY_FILE
 import time
 from dateutil import parser
 
+from schemas import SCHEMA_YOUTUBE_SEARCH_RESULTS
+from utils import bq_get_client, upload_rows
 
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
+
 
 def main():
     """ Search YouTube and log results
@@ -59,22 +62,22 @@ def main():
         logger.setLevel(logging.INFO)
     
     keywords = get_keywords(args['<csv_input_file_name>'])
+    search_youtube_keywords(keywords, max_search_results, search_type)
+
+
+def search_youtube_keywords(keywords, max_search_results, search_type):
     logging.info(f"Starting to collect search results from {len(keywords)} keywords.")
-
     start_time = datetime.datetime.utcnow()
-
     results = get_search_results_from_keywords(keywords, search_type=search_type, max_results=max_search_results)
-
     logging.info(f"Processed search results in {datetime.datetime.utcnow() - start_time}, "
-                f"found {len(search_results_to_test)} results from {len(keywords)} keywords")
-
+                 f"found {len(results)} results from {len(keywords)} keywords")
     # Save search results
-    suffix = ".{}".format(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
-    save_file_name = f"youtube_politics_search_{suffix}.csv"
-
-    df = pd.DataFrame(results)
-    df.to_csv(save_file_name, encoding="utf-8", quoting=csv.QUOTE_ALL)
-    logging.info(f"Saved results to {save_file_name}.")
+    save_table = "{}_{}".format(SAVE_TABLE_SEARCH, datetime.datetime.now().strftime('%Y%m%d'))
+    backup_file_name = save_table + ".json"
+    bq_client = bq_get_client(project_id=PROJECT_ID, json_key_file=BQ_KEY_FILE)
+    upload_rows(SCHEMA_YOUTUBE_SEARCH_RESULTS, results, bq_client, DATASET, save_table,
+                backup_file_name=backup_file_name)
+    logging.info(f"Saved results to BQ {save_table}.")
 
 
 def get_search_results_from_keywords(keywords_dicts, search_type, max_results):
@@ -96,9 +99,10 @@ def get_search_results_from_keywords(keywords_dicts, search_type, max_results):
                      "safeSearch": "none",
                      "type": "video", }
 
+        arguments['q'] = keyword
         # Escaping search terms for youtube
-        escaped_search_terms = quote(keyword.encode('utf-8'))
-        arguments['q'] = escaped_search_terms
+        #escaped_search_terms = quote(keyword.encode('utf-8'))
+        #arguments['q'] = escaped_search_terms
 
         if search_type == 'all-time':
             pass
