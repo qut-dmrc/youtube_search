@@ -75,15 +75,16 @@ def upload_rows(schema, rows, bq_client, bq_dataset, bq_table, partition_by_day=
                 logger.error("Exception pushing to BigQuery table {}.{}, attempt {}, reason: {}".format(bq_dataset, bq_table, index, str_most_recent_error))
 
         if not inserted and backup_file_name:
-            logger.error("Failed to upload rows! Saving {} rows to newline delimited JSON file for later upload.\nMost recent error: {}".format(len(rows), str_most_recent_error))
+            save_file_full = '{}.{}'.format(backup_file_name, index)
+            logger.error("Failed to upload rows! Saving {} rows to newline delimited JSON file ({}) for later upload.\nMost recent error: {}".format(len(rows), save_file_full, str_most_recent_error))
 
             try:
-                os.makedirs(os.path.dirname(backup_file_name), exist_ok=True)
+                os.makedirs(os.path.dirname(save_file_full), exist_ok=True)
                 df = pd.DataFrame.from_dict(chunk)
-                df.to_json(backup_file_name + '.' + str(index), orient="records", force_ascii=False)
+                df.to_json(save_file_full, orient="records", force_ascii=False)
             except Exception as e:
                 str_most_recent_error = str(e)[:200]
-                logger.error("Unable to save backup file {}: {}".format(backup_file_name, str_most_recent_error))
+                logger.error("Unable to save backup file {}: {}".format(save_file_full, str_most_recent_error))
     return inserted
 
 
