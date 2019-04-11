@@ -76,7 +76,7 @@ def search_youtube_keywords(keywords, max_search_results, search_type):
                  f"found {len(results)} results from {len(keywords)} keywords")
     # Save search results
     save_table = "{}_{}".format(SAVE_TABLE_SEARCH, datetime.datetime.now().strftime('%Y%m%d'))
-    backup_file_name = save_table + ".json"
+    backup_file_name = "data/{}.json" .format(save_table)
     bq_client = bq_get_client(project_id=PROJECT_ID, json_key_file=BQ_KEY_FILE)
     logging.info(f"Saving results to BQ {save_table} or backup file {backup_file_name}.")
     upload_rows(SCHEMA_YOUTUBE_SEARCH_RESULTS, results, bq_client, DATASET, save_table,
