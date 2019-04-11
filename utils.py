@@ -80,6 +80,10 @@ def upload_rows(schema, rows, bq_client, bq_dataset, bq_table, partition_by_day=
 
             try:
                 os.makedirs(os.path.dirname(save_file_full), exist_ok=True)
+            except FileNotFoundError:
+                pass # We get here if we are saving to a file within the cwd without a full path
+
+            try:
                 df = pd.DataFrame.from_dict(chunk)
                 df.to_json(save_file_full, orient="records", force_ascii=False)
             except Exception as e:
