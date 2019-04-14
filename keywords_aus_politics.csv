@@ -1,6 +1,6 @@
 keyword,study_group,date_added,source
-Australian election,Australian election,2019-04-14,topical issues
-Federal election,Australian election,2019-04-14,topical issues
+(Australian OR Federal) election,Australian election,2019-04-14,topical issues
+(Morrison OR Shorten),Australian election,2019-04-14,topical issues
 climate change,Australian election,2019-04-14,topical issues
 electric cars,Australian election,2019-04-14,topical issues
 budget surplus,Australian election,2019-04-14,topical issues
