@@ -17,6 +17,8 @@ Setup:
 """
 
 import datetime
+from logging.handlers import RotatingFileHandler
+
 from docopt import docopt
 import pandas as pd
 import csv
@@ -36,16 +38,16 @@ from utils import bq_get_client, upload_rows
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 
-
 def main():
     """ Search YouTube and log results
 
     Usage:
-      youtube_search.py [-v] [--search_results=s] [--search_type=type] <csv_input_file_name>
+      youtube_search.py [-v] [-l log_file] [--search_results=s] [--search_type=type] <csv_input_file_name>
 
     Options:
       -h --help                 Show this screen.
       -v --verbose              Increase verbosity for debugging.
+      -l <log_file> --log=<log_file>    Save log to file
       --search_results=s        Number of search results to save [default: 20]
       --search_type=type        Type of search (last-hour, top-rated, all-time, or today [default: today]
 
@@ -57,12 +59,7 @@ def main():
     max_search_results = int(args['--search_results'])
     search_type = ''.join(args['--search_type'])
 
-    logging.basicConfig(format="%(asctime)s [%(filename)-20.20s:%(lineno)-4.4s - %(funcName)-20.20s() [%(levelname)-8.8s]  %(message).5000s")
-    logger = logging.getLogger()
-    if args['--verbose']:
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.INFO)
+    setup_logging(log_file_name=args['--log'], verbose=args['--verbose'])
     
     keywords = get_keywords(args['<csv_input_file_name>'])
     search_youtube_keywords(keywords, max_search_results, search_type)
@@ -184,6 +181,50 @@ def get_keywords(csv_file):
     assert 'study_group' in df.columns, "Invalid CSV file. Must contain columns: keyword, study_group"
 
     return df[columns].to_dict(orient='records')
+
+
+def setup_logging(log_file_name=None, verbose=False):
+    if not verbose:
+        # Quieten other loggers down a bit (particularly requests and google api client)
+        for logger_str in logging.Logger.manager.loggerDict:
+            try:
+                logging.getLogger(logger_str).setLevel(logging.WARNING)
+
+            except:
+                pass
+
+    logFormatter = logging.Formatter(
+        "%(asctime)s [%(filename)-20.20s:%(lineno)-4.4s - %(funcName)-20.20s() [%(levelname)-8.8s]  %(message).5000s")
+    logger = logging.getLogger()
+
+    consoleHandler = logging.StreamHandler()
+    consoleHandler.setFormatter(logFormatter)
+    logger.addHandler(consoleHandler)
+
+    if verbose:
+        consoleHandler.setLevel(logging.DEBUG)
+    else:
+        consoleHandler.setLevel(logging.INFO)
+
+    if log_file_name:
+        fileHandler = RotatingFileHandler(log_file_name, maxBytes=20000000, backupCount=20)
+        fileHandler.setFormatter(logFormatter)
+
+        if verbose:
+            fileHandler.setLevel(logging.DEBUG)
+        else:
+            fileHandler.setLevel(logging.INFO)
+
+        logger.addHandler(fileHandler)
+
+    # Add
+
+    if verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+
+    return logger
 
 
 if __name__ == '__main__':
