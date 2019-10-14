@@ -66,10 +66,10 @@ def upload_rows(schema, rows, bq_client, bq_dataset, bq_table, partition_by_day=
             try:
                 inserted = bq_client.push_rows(bq_dataset, bq_table, chunk, insert_id_key=insert_id)
                 if inserted:
-                    logger.info("Successfully inserted {} rows to BigQuery table {}.{}, attempt {}.".format(len(chunk), bq_dataset, bq_table, index))
+                    logger.info("Successfully inserted {} rows to BigQuery table {}.{}, chunk {}.".format(len(chunk), bq_dataset, bq_table, index))
                 else:
                     str_most_recent_error = 'Unable to push rows.'
-                    logger.info("Failed inserting {} rows to BigQuery table {}.{}, attempt {}.".format(len(chunk), bq_dataset, bq_table, index))
+                    logger.info("Failed inserting {} rows to BigQuery table {}.{}, chunk {}.".format(len(chunk), bq_dataset, bq_table, index))
             except Exception as e:
                 str_most_recent_error = str(e)[:200]
                 logger.error("Exception pushing to BigQuery table {}.{}, attempt {}, reason: {}".format(bq_dataset, bq_table, index, str_most_recent_error))
