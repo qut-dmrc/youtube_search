@@ -207,7 +207,7 @@ def setup_logging(log_file_name=None, verbose=False):
         consoleHandler.setLevel(logging.INFO)
 
     if log_file_name:
-        fileHandler = RotatingFileHandler(log_file_name, maxBytes=20000000, backupCount=20)
+        fileHandler = RotatingFileHandler(log_file_name, maxBytes=20000000, backupCount=20, encoding="UTF-8")
         fileHandler.setFormatter(logFormatter)
 
         if verbose:
