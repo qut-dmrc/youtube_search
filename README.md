@@ -39,6 +39,12 @@ Copy config_default.yml to config.yml and fill with your values.
 
 Add your YouTube API key to the config file, and also add the file path to your BigQuery JSON key, and fill in the appropriate values for the table you want to save results to.
 
+Note that the YouTube LIST API is not currently returning all the results that it should be - there are open bug reports, but the problem has not been fixed. See:
+
+* https://support.google.com/youtube/thread/2494861?hl=en - showing that the problem first occurred in March 2019, and was fixed at one point
+* https://support.google.com/youtube/thread/2915550?hl=en - showing that the problem still exists.
+* See also https://digitalsocialcontract.net/youtube-nukes-its-api-and-search-functionality-in-response-to-christchurch-massacre-6051b4f2bb77 
+
 Run the program:
 
 ```
