@@ -22,21 +22,13 @@ from logging.handlers import RotatingFileHandler
 from docopt import docopt
 import pandas as pd
 import csv
-import requests
-from bs4 import BeautifulSoup
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-from urllib.parse import quote
 import logging
-from config_local import DEVELOPER_KEY, PROJECT_ID, DATASET, SAVE_TABLE_SEARCH, BQ_KEY_FILE
-import time
-from dateutil import parser
+from config import cfg
 
 from schemas import SCHEMA_YOUTUBE_SEARCH_RESULTS
-from utils import bq_get_client, upload_rows
+from utils import bq_get_client, upload_rows, yt_get_client
+from youtube_utils import search_youtube
 
-YOUTUBE_API_SERVICE_NAME = "youtube"
-YOUTUBE_API_VERSION = "v3"
 
 def main():
     """ Search YouTube and log results
@@ -72,17 +64,17 @@ def search_youtube_keywords(keywords, max_search_results, search_type):
     logging.info(f"Processed search results in {datetime.datetime.utcnow() - start_time}, "
                  f"found {len(results)} results from {len(keywords)} keywords")
     # Save search results
-    save_table = SAVE_TABLE_SEARCH
+    save_table = cfg['SAVE_TABLE_SEARCH']
     backup_file_name = "data/{}_{}.json" .format(save_table, datetime.datetime.now().strftime('%Y%m%d'))
-    bq_client = bq_get_client(project_id=PROJECT_ID, json_key_file=BQ_KEY_FILE)
+    bq_client = bq_get_client(project_id=cfg['PROJECT_ID'], json_key_file=cfg['BQ_KEY_FILE'])
     logging.info(f"Saving results to BQ {save_table} or backup file {backup_file_name}.")
-    upload_rows(SCHEMA_YOUTUBE_SEARCH_RESULTS, results, bq_client, DATASET, save_table,
+    upload_rows(SCHEMA_YOUTUBE_SEARCH_RESULTS, results, bq_client, cfg['DATASET'], save_table,
                 backup_file_name=backup_file_name)
 
 
 def get_search_results_from_keywords(keywords_dicts, search_type, max_results):
     assert search_type in ['last-hour', 'top-rated', 'all-time', 'today'], "Type must be specified."
-    youtube_client = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=DEVELOPER_KEY)
+    youtube_client = yt_get_client(developerKey=cfg['DEVELOPER_KEY'])
 
     search_results = []
     seconds_between_calls = 2
@@ -133,44 +125,6 @@ def get_search_results_from_keywords(keywords_dicts, search_type, max_results):
         #time.sleep(seconds_between_calls)
 
     return search_results
-
-
-def search_youtube(youtube_client, seconds_between_calls, **kwargs):
-    videos = []
-
-    try:
-        search_response = youtube_client.search().list(
-            **kwargs
-        ).execute()
-
-        for search_result in search_response.get("items", []):
-            if search_result["id"]["kind"] == "youtube#video":
-                videos.append(search_result)
-    except HttpError as e:
-        # If the error is a rate limit or connection error, back off a bit -  usually a server problem
-        if e.resp.status in [403, 500, 503]:
-            time.sleep(2 * seconds_between_calls)
-            logging.error("Received a HTTP error searching API. Sleeping for five seconds. Error: {}".format(e))
-        else:
-            logging.error("Problem getting youtube videos: {}".format(e))
-    except Exception as e:
-        logging.error("Problem getting youtube videos: {}".format(e))
-
-    results = []
-    for video in videos:
-        rowdict = {'publishedAt': video["snippet"]["publishedAt"]}
-
-        if isinstance(rowdict['publishedAt'], str):
-            rowdict['publishedAt'] = parser.parse(rowdict['publishedAt'])
-
-        rowdict['videoId'] = video["id"]["videoId"]
-        rowdict['title'] = video["snippet"]["title"]
-        rowdict['channelTitle'] = video["snippet"]["channelTitle"]
-        rowdict['description'] = video["snippet"]["description"]
-
-        results.append(rowdict)
-
-    return results
 
 
 def get_keywords(csv_file):

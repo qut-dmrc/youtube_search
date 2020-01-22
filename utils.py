@@ -3,6 +3,10 @@ import logging
 import numpy as np
 import os
 import pandas as pd
+from googleapiclient.discovery import build
+
+YOUTUBE_API_SERVICE_NAME = "youtube"
+YOUTUBE_API_VERSION = "v3"
 
 def bq_get_client(project_id, json_key_file):
     logger = logging.getLogger()
@@ -18,6 +22,11 @@ def bq_get_client(project_id, json_key_file):
         return None
 
     return client
+
+def yt_get_client(developer_key):
+    client = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=developer_key)
+    return client
+        
 
 def check_create_table(bq_client, schema, bq_dataset, bq_table, partition_by_day=True, create_if_not_exists=True, expiry_days=14):
     _exists = bq_client.check_table(bq_dataset, bq_table)
