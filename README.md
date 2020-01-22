@@ -1,21 +1,22 @@
-# YouTube search
+# YouTube search tools
 
-Our research examines how political parties and other actors communicate during elections.
+This repository includes two scripts to search YouTube videos. 
 
-This script takes a list of keywords and searches YouTube for matches. It saves results to Google BigQuery. You can configure the type of search and set frequency according to your needs. Note that in accordance with YouTube API rules, data saved to BigQuery expires in 14 days.
+* YouTube Search: a script to search for videos matching keywords.
 
-## Usage
+* YouTube Sample: a script to generate a random sample of YouTube videos posted in the last few minutes
+
+We use this data to examine how political parties and other actors communicate using YouTube.
+
+These scripts save results to Google BigQuery. You can configure the type of search and set frequency according to your needs. Note that in accordance with YouTube API rules, data saved to BigQuery expires in 14 days.
+
+## youtube_search Usage
 
 Create a CSV file with at least two columns: keyword, study_group. Our standard input CSV contains a list of all Australian Federal candidates and electorates.
 
-Copy config_default.py to config_local.py, and fill in your values as appropriate.
+Copy config_default.yml to config.yml and fill with your values. 
 
-Add your YouTube API key to config_local.py, in the format:
-DEVELOPER_KEY = "<YOUR_API_KEY_HERE>"
-
-Also add the file path to your BigQuery JSON key, and fill in the appropriate values for the table you want to save results to.
-
-
+Add your YouTube API key to the config file, and also add the file path to your BigQuery JSON key, and fill in the appropriate values for the table you want to save results to.
 
 Run the program:
 
@@ -30,4 +31,16 @@ Run the program:
       --search_type=type        Type of search (last-hour, top-rated, all-time, or today [default: today]
 
       --version  Show version.
+```
+
+## youtube_sample Usage
+
+Copy config_default.yml to config.yml and fill with your values. 
+
+Add your YouTube API key to the config file, and also add the file path to your BigQuery JSON key, and fill in the appropriate values for the table you want to save results to.
+
+Run the program:
+
+```
+    python3 youtube_sample.py 
 ```
