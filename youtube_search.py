@@ -74,7 +74,7 @@ def search_youtube_keywords(keywords, max_search_results, search_type):
 
 def get_search_results_from_keywords(keywords_dicts, search_type, max_results):
     assert search_type in ['last-hour', 'top-rated', 'all-time', 'today'], "Type must be specified."
-    youtube_client = yt_get_client(developerKey=cfg['DEVELOPER_KEY'])
+    youtube_client = yt_get_client(developer_key=cfg['DEVELOPER_KEY'])
 
     search_results = []
     seconds_between_calls = 2

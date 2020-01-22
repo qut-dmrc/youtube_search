@@ -49,7 +49,7 @@ def main():
     videos = []
     youtube = None
 
-    start_time = datetime.datetime.now()  # grabs the system time
+    start_time = datetime.datetime.utcnow()  # grabs the system time
     logger.info("Starting scrape from Youtube, running every {} seconds.".format(SECONDS_BETWEEN_CALLS))
     next_summary_time = datetime.datetime.utcnow() + datetime.timedelta(
         seconds=SECONDS_BETWEEN_EMAIL_UPDATES)
@@ -82,7 +82,7 @@ def main():
                 bq_client = bq_get_client(project_id=cfg['PROJECT_ID'], json_key_file=cfg['BQ_KEY_FILE'])
                 logger.info("Saving {} videos to BigQuery.".format(len(videos)))
                 data_prefix = format(
-                    datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
+                    datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S'))
                 upload_rows(SCHEMA_YOUTUBE_SEARCH_RESULTS, videos, bq_client, cfg['DATASET'], cfg['SAVE_TABLE_SEARCH'],
                                    backup_file_name=None)
 
