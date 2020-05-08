@@ -4,6 +4,9 @@ import numpy as np
 import os
 import pandas as pd
 from googleapiclient.discovery import build
+from google.cloud import bigquery
+from google.cloud import bigquery_storage_v1beta1
+import google.auth
 
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
@@ -23,6 +26,23 @@ def bq_get_client(project_id, json_key_file):
 
     return client
 
+
+def bq_get_clients(project_id, json_key_file):
+    credentials, your_project_id = google.auth.default(
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    )
+
+    # Make clients.
+    bqclient = bigquery.Client(
+        credentials=credentials,
+        project=your_project_id,
+    )
+    bqstorageclient = bigquery_storage_v1beta1.BigQueryStorageClient(
+        credentials=credentials
+    )
+    return bqclient, bqstorageclient
+
+
 def yt_get_client(developer_key):
     client = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=developer_key)
     return client
@@ -41,65 +61,96 @@ def check_create_table(bq_client, schema, bq_dataset, bq_table, partition_by_day
             return False
     return True
 
-def upload_rows(schema, rows, bq_client, bq_dataset, bq_table, partition_by_day=True, insert_id='insert_id',
-                backup_file_name=None, ensure_schema_compliance=False, len_chunks=500):
+def upload_rows(schema, rows, bq_client, bq_dataset, bq_table,
+                backup_file_name=None, len_chunks=500):
     """ Upload results to Google Bigquery """
-
-    str_most_recent_error = ''
 
     logger = logging.getLogger()
 
-    # Try to save to BigQuery. Sometimes this fails for reasons out of our control; catch the errors and return False
-    try:
-        _table_exists = check_create_table(bq_client, schema, bq_dataset, bq_table, create_if_not_exists=True)
-        if not _table_exists:
-            str_most_recent_error = 'Table does not exist.'
-            logger.exception('Table does not exist and cannot create')
-
-    except Exception as e:
-        str_most_recent_error = str(e)
-        logger.exception("Exception checking BigQuery table: ".format(e))
-        _table_exists = False
-
-    # Insert data into table.
     inserted = False
-
     bq_rows = rows
 
     # Make sure objects are serializable. So far, special handling for Numpy types and dates:
     bq_rows = scrub_serializable(bq_rows)
 
+    table = None
+    try:
+        table = bq_client.get_table(f"{bq_dataset}.{bq_table}")
+    except Exception as e:
+        logger.error(
+            msg=f"Unable to save rows. Table {bq_dataset}.{bq_table} does not exist or there was some other "
+                         f"problem getting the table.", subject="Error inserting rows to Google Bigquery!")
+
     # google recommends chunks of ~500 rows
     for index, chunk in enumerate(chunks(bq_rows, len_chunks)):
-        if _table_exists:
+        str_error = ""
+        inserted = False
+        if table:
             try:
-                inserted = bq_client.push_rows(bq_dataset, bq_table, chunk, insert_id_key=insert_id)
-                if inserted:
-                    logger.info("Successfully inserted {} rows to BigQuery table {}.{}, chunk {}.".format(len(chunk), bq_dataset, bq_table, index))
+                logger.debug(
+                    "Inserting {} rows to BigQuery table {}.{}, attempt {}.".format(len(chunk), bq_dataset,
+                                                                                                bq_table, index))
+
+                errors = bq_client.insert_rows(table, chunk)
+                if errors == []:
+                    inserted = True
+
+                    logger.info("Successfully inserted {} rows to BigQuery table {}.{}, attempt {}.".format(len(chunk), bq_dataset, bq_table, index))
                 else:
-                    str_most_recent_error = 'Unable to push rows.'
-                    logger.info("Failed inserting {} rows to BigQuery table {}.{}, chunk {}.".format(len(chunk), bq_dataset, bq_table, index))
+                    str_error += f"Google BigQuery returned an error result: {str(errors)}\n\n"
+
             except Exception as e:
-                str_most_recent_error = str(e)[:200]
-                logger.error("Exception pushing to BigQuery table {}.{}, attempt {}, reason: {}".format(bq_dataset, bq_table, index, str_most_recent_error))
+                str_error += "Exception pushing to BigQuery table {}.{}, attempt {}, reason: {}\n\n".format(bq_dataset, bq_table, index, str(e)[:2000])
+        else:
+            str_error += "Could not get table, so could not push rows.\n\n"
 
-        if not inserted and backup_file_name:
-            save_file_full = '{}.{}'.format(backup_file_name, index)
-            logger.error("Failed to upload rows! Saving {} rows to newline delimited JSON file ({}) for later upload.\nMost recent error: {}".format(len(rows), save_file_full, str_most_recent_error))
+        if not inserted:
+            if backup_file_name:
+                save_file_full = '{}.{}'.format(backup_file_name, index)
+                logger.error("Failed to upload rows! Saving {} rows to newline delimited JSON file ({}) for later upload.".format(len(rows), save_file_full))
 
-            try:
-                os.makedirs(os.path.dirname(save_file_full), exist_ok=True)
-            except FileNotFoundError:
-                pass # We get here if we are saving to a file within the cwd without a full path
+                try:
+                    os.makedirs(os.path.dirname(save_file_full), exist_ok=True)
+                except FileNotFoundError:
+                    pass  # We get here if we are saving to a file within the cwd without a full path
 
-            try:
-                df = pd.DataFrame.from_dict(chunk)
-                df.to_json(save_file_full, orient="records", force_ascii=False)
-            except Exception as e:
-                str_most_recent_error = str(e)[:200]
-                logger.error("Unable to save backup file {}: {}".format(save_file_full, str_most_recent_error))
+                try:
+                    df = pd.DataFrame.from_dict(chunk)
+                    df = nan_ints(df, convert_strings=True)
+                    df.to_json(save_file_full, orient="records", lines=True, force_ascii=False)
+                    str_error += "Saved {} rows to newline delimited JSON file ({}) for later upload.\n\n".format(len(rows), save_file_full)
+                except Exception as e:
+                    str_error += "Unable to save backup file {}: {}\n\n".format(save_file_full,  str(e)[:200])
+
+            else:
+                str_error += "No backup save file configured.\n\n"
+
+            message_body = "Exception pushing to BigQuery table {}.{}, chunk {}.\n\n".format(
+                bq_dataset, bq_table, index)
+            message_body += str_error
+
+            logger.error(
+                msg=message_body, subject=f"Error inserting rows to Google Bigquery! Table: {bq_dataset}.{bq_table}")
+            logger.debug("First three rows:")
+            logger.debug(bq_rows[:3])
+
     return inserted
 
+
+def nan_ints(df,convert_strings=False,subset = None):
+    # Convert int, float, and object columns to int64 if possible (requires pandas >0.24 for nullable int format)
+    types = ['int64','float64']
+    if subset is None:
+        subset = list(df)
+    if convert_strings:
+        types.append('object')
+    for col in subset:
+        try:
+            if df[col].dtype in types:
+                df[col] = df[col].astype(float).astype('Int64')
+        except:
+            pass
+    return df
 
 def scrub_serializable(d):
     try:

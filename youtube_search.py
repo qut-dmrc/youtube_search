@@ -26,7 +26,7 @@ import logging
 from config import cfg
 
 from schemas import SCHEMA_YOUTUBE_SEARCH_RESULTS
-from utils import bq_get_client, upload_rows, yt_get_client
+from utils import bq_get_clients, upload_rows, yt_get_client
 from youtube_utils import search_youtube
 
 
@@ -66,7 +66,7 @@ def search_youtube_keywords(keywords, max_search_results, search_type):
     # Save search results
     save_table = cfg['SAVE_TABLE_SEARCH']
     backup_file_name = "data/{}_{}.json" .format(save_table, datetime.datetime.now().strftime('%Y%m%d'))
-    bq_client = bq_get_client(project_id=cfg['PROJECT_ID'], json_key_file=cfg['BQ_KEY_FILE'])
+    bq_client, bq_storage_client = bq_get_clients(project_id=cfg['PROJECT_ID'], json_key_file=cfg['BQ_KEY_FILE'])
     logging.info(f"Saving results to BQ {save_table} or backup file {backup_file_name}.")
     upload_rows(SCHEMA_YOUTUBE_SEARCH_RESULTS, results, bq_client, cfg['DATASET'], save_table,
                 backup_file_name=backup_file_name)

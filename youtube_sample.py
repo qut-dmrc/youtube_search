@@ -25,7 +25,7 @@ import time
 
 import pytz
 
-from utils import bq_get_client, yt_get_client, upload_rows
+from utils import bq_get_clients, yt_get_client, upload_rows
 from log import setup_logging, print_run_summary, send_exception
 from schemas import SCHEMA_YOUTUBE_SEARCH_RESULTS
 from config import cfg
@@ -79,7 +79,7 @@ def main():
                 videos.append(video)
 
             if len(videos) >= 250:
-                bq_client = bq_get_client(project_id=cfg['PROJECT_ID'], json_key_file=cfg['BQ_KEY_FILE'])
+                bq_client, bq_storage_client = bq_get_clients(project_id=cfg['PROJECT_ID'], json_key_file=cfg['BQ_KEY_FILE'])
                 logger.info("Saving {} videos to BigQuery.".format(len(videos)))
                 data_prefix = format(
                     datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S'))
