@@ -1,3 +1,8 @@
+# ARCHIVED - YouTube removed required functionality
+
+This tool hasn't worked since [YouTube broke the ability to search by date in 2019](https://medium.com/@nicsuzor/youtube-nukes-its-api-and-search-functionality-in-response-to-christchurch-massacre-6051b4f2bb77).
+
+
 # YouTube search tools
 
 This repository includes two scripts to search YouTube videos. 
